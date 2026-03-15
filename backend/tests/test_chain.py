@@ -1,10 +1,15 @@
 import pytest
 import asyncio
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
 from backend.app.chain import RAGChain
 from backend.app.retrieval import VectorStore
 from langchain.schema import Document
 
+
+async def empty_stream(*args, **kwargs):
+    return 
+    yield
+    
 @pytest.fixture
 def mock_vector_store():
     store = MagicMock(spec=VectorStore)
@@ -20,7 +25,7 @@ def mock_vector_store():
 def rag_chain(mock_vector_store):
     chain = RAGChain(mock_vector_store)
     chain.llm = MagicMock()
-    chain.llm.astream = AsyncMock(return_value=iter([]))
+    chain.llm.astream = empty_stream
     return chain
 
 def test_rag_chain_searches_correct_collection(rag_chain, mock_vector_store):
