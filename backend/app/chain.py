@@ -22,10 +22,40 @@ class RAGChain:
         self.vector_store = vector_store
         self.llm = ChatOpenAI(
             model = "gpt-4o-mini",
-            termperature = 0,
+            temperature=0,
             streaming =True
         )
 
     async def query_stream(self, question: str, collection_name:str, chat_history: list[tuple[str,str]] = []):
         docs = self.vector_store.similarity_search(question, collection_name)
+
+        context = "\n\n".join([
+            f"[Source: {doc.metadata.get('source', 'unknown')}, Page: {doc.metadata.get('page', 'N/A')}]\n{doc.page_content}"
+            for doc in docs
+        ])
+
+        history_str = "\n".join([
+            f"Human: {h}\nAssistant: {a}"
+            for h, a in chat_history
+        ])
+
+        prompt = SYSTEM_PROMPT.format(
+            context=context,
+            chat_history=history_str,
+            question=question
+        )
+        sources = [
+            {
+                "source": doc.metadata.get("source","unknown"),
+                "page": doc.metadata.get("page"),
+                "preview": doc.page_content[:200]
+            }
+            for doc in docs
+        ]
+        async for chunk in self.llm.astream(prompt):
+            yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"
+
+        yield f"data: {json.dumps({'type':'sources', 'content': sources})}\n\n"
+
+
 
