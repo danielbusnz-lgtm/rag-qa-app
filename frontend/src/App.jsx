@@ -2,7 +2,7 @@ import { useState } from 'react'
 import './App.css'
 import axios from 'axios'
 
-const API = "http://localhost:8000"
+const API = "https://rag-qa-app-production.up.railway.app"
 
 function App() {
   const [question, setQuestion] = useState("")
