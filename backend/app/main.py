@@ -38,14 +38,55 @@ def health():
 async def ingest_pdf(
         file: UploadFile = File(...),
         collection_name: str = "default"
-):
+        ):
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail = "only pdf files supported")
     content = await file.read()
     chunks = ingester.ingest_pdf(content, file.filename)
     added = vector_store.add_documents(chunks, collection_name)
     return IngestResponse(
-        message f"Successfully ingested{file.filename}",
+        message=f"Successfully ingested {file.filename}",
         chunks_added =added,
         collection_name = collection_name
     )
+
+@app.post("/ingest/url", response_model=IngestResponse)
+async def ingest_url(request: IngestURLRequest):
+    docs = await ingester.ingest_url(request.url)
+    added = vector_store.add_documents(docs, request.collection_name)
+    return IngestResponse(
+        message=f"Successfully ingested {request.url}",
+        chunks_added=added,
+        collection_name=request.collection_name
+    )
+
+@app.post("/ingest/text", response_model = IngestResponse)
+async def ingest_text(request: IngestTextRequest):
+    docs = ingester.ingest_text(request.text, request.source_name)
+    added = vector_store.add_documents(docs, request.collection_name)
+    return IngestResponse(
+        message = f"Successfully ingested '{request.source_name}'",
+        chunks_added = added,
+        collection_name = request.collection_name
+    )
+
+@app.post("/query")
+async def query(request: QueryRequest):
+    return StreamingResponse(
+        rag_chain.query_stream(
+            request.question,
+            request.collection_name,
+            request.chat_history
+
+        ),
+        media_type="text/event-stream"
+    )
+
+@app.get("/collections")
+def list_collections():
+    return {"collections": vector_store.list_collections()}
+
+@app.delete("/collections/{collection_name}")
+def delete_collection(collection_name: str):
+    vector_store.delete_collection(collection_name)
+    return {"message": f"Deleted collection '{collection_name}'"}
