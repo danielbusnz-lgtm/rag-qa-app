@@ -9,7 +9,7 @@ from .retrieval import VectorStore
 from .chain import RAGChain
 import os
 
-load_dotenv(dotenv_path=r"C:\Users\danie\rag-qa-app\.env", override=True)
+load_dotenv()
 
 vector_store = VectorStore()
 ingester = DocumentIngester()
