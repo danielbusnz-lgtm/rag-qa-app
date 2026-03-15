@@ -56,6 +56,7 @@ class RAGChain:
             yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"
 
         yield f"data: {json.dumps({'type':'sources', 'content': sources})}\n\n"
+        yield "data: [DONE]\n\n"
 
 
 
