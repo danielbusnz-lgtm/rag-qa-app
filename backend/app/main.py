@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+import asyncio
 from .models import IngestURLRequest, IngestTextRequest, QueryRequest, IngestResponse
 from .ingestion import DocumentIngester
 from .retrieval import VectorStore
@@ -42,8 +43,9 @@ async def ingest_pdf(
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail = "only pdf files supported")
     content = await file.read()
-    chunks = ingester.ingest_pdf(content, file.filename)
-    added = vector_store.add_documents(chunks, collection_name)
+    loop = asyncio.get_event_loop()
+    chunks = await loop.run_in_executor(None, ingester.ingest_pdf, content, file.filename)
+    added = await loop.run_in_executor(None, vector_store.add_documents, chunks, collection_name)
     return IngestResponse(
         message=f"Successfully ingested {file.filename}",
         chunks_added =added,
@@ -53,7 +55,8 @@ async def ingest_pdf(
 @app.post("/ingest/url", response_model=IngestResponse)
 async def ingest_url(request: IngestURLRequest):
     docs = await ingester.ingest_url(request.url)
-    added = vector_store.add_documents(docs, request.collection_name)
+    loop = asyncio.get_event_loop()
+    added = await loop.run_in_executor(None, vector_store.add_documents, docs, request.collection_name)
     return IngestResponse(
         message=f"Successfully ingested {request.url}",
         chunks_added=added,
@@ -62,8 +65,9 @@ async def ingest_url(request: IngestURLRequest):
 
 @app.post("/ingest/text", response_model = IngestResponse)
 async def ingest_text(request: IngestTextRequest):
-    docs = ingester.ingest_text(request.text, request.source_name)
-    added = vector_store.add_documents(docs, request.collection_name)
+    loop = asyncio.get_event_loop()
+    docs = await loop.run_in_executor(None, ingester.ingest_text, request.text, request.source_name)
+    added = await loop.run_in_executor(None, vector_store.add_documents, docs, request.collection_name)
     return IngestResponse(
         message = f"Successfully ingested '{request.source_name}'",
         chunks_added = added,
