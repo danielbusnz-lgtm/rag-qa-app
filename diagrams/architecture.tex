@@ -152,7 +152,7 @@
 
 % === ROW 2: Ingestion sources ===
 
-\node[step=teal, below=2.5cm of client, xshift=-1.5cm]
+\node[step=teal, below=3.2cm of client, xshift=-1.5cm]
   (pdf) {\textbf{PDF Loader}\\[-1pt]\nsub{PyMuPDF}};
 
 \node[step=teal, right=0.8cm of pdf]
@@ -170,7 +170,7 @@
 
 % === ROW 3: Chunking ===
 
-\node[step=orange, below=1.6cm of url]
+\node[step=orange, below=2.2cm of url]
   (chunker) {\textbf{Chunker}\\[-1pt]\nsub{1000 char / 200 overlap}};
 
 \draw[flow] (pdf.south) |- (chunker.west);
@@ -179,7 +179,7 @@
 
 % === ROW 4: Embeddings + Vector Store ===
 
-\node[service=primary, below=1.6cm of chunker, xshift=-1.5cm]
+\node[service=primary, below=2.2cm of chunker, xshift=-1.5cm]
   (embeddings) {\textbf{Embeddings}\\[-1pt]\nsub{text-embedding-3-small}};
 
 \node[stor=green, right=2cm of embeddings]
@@ -193,7 +193,7 @@
 \node[service=magenta, right=3cm of api]
   (rag) {\textbf{RAG Chain}\\[-1pt]\nsub{LangChain}};
 
-\node[service=purple, below=2cm of rag]
+\node[service=purple, below=3cm of rag]
   (llm) {\textbf{GPT-4o-mini}\\[-1pt]\nsub{OpenAI, temp=0}};
 
 % API -> RAG
