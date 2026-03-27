@@ -25,19 +25,7 @@ Reading through long PDFs, web pages, and notes to find a specific answer is slo
 
 ## Architecture
 
-```
-┌─────────────┐      ┌──────────────────────────────────────────────┐
-│  React UI   │◄────►│  FastAPI Backend                             │
-│  (Vite)     │ SSE  │                                              │
-└─────────────┘      │  ┌────────────┐  ┌────────────┐  ┌────────┐ │
-                     │  │ Ingestion  │  │ Retrieval  │  │  RAG   │ │
-                     │  │            │  │            │  │ Chain  │ │
-                     │  │ PDF/URL/   │  │ ChromaDB   │  │        │ │
-                     │  │ Text ──►   │──►│ + OpenAI  │──►│ GPT-4o │ │
-                     │  │ Chunking   │  │ Embeddings │  │  mini  │ │
-                     │  └────────────┘  └────────────┘  └────────┘ │
-                     └──────────────────────────────────────────────┘
-```
+![Architecture Diagram](diagrams/architecture.png)
 
 **Pipeline:** Documents are split into 1000 character chunks (200 overlap), embedded with `text-embedding-3-small`, and stored in ChromaDB. At query time, the top 4 similar chunks are retrieved and passed as context to `gpt-4o-mini`, which streams its response back.
 
