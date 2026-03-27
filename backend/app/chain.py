@@ -1,3 +1,17 @@
+"""RAG question answering chain with streaming output.
+
+Wraps a ChatOpenAI model and a VectorStore to answer questions grounded
+in retrieved documents. Responses stream back as Server-Sent Events (SSE)
+so the frontend can render tokens incrementally.
+
+Example::
+
+    store = VectorStore()
+    chain = RAGChain(store)
+    async for event in chain.query_stream("What is X?", "my_docs"):
+        print(event)
+"""
+
 from langchain_openai import ChatOpenAI
 from langchain.schema import Document
 from .retrieval import VectorStore
@@ -18,7 +32,15 @@ Question: {question}
 Answer:"""
 
 class RAGChain:
-    def __init__(self, vector_store:VectorStore):
+    """A retrieval-augmented generation chain that streams answers over SSE.
+
+    Attributes:
+        vector_store: The backing store used for similarity search.
+        llm: ChatOpenAI instance (gpt-4o-mini, temperature 0, streaming on).
+    """
+
+    def __init__(self, vector_store: VectorStore):
+        """Set up the chain with a vector store and a default ChatOpenAI model."""
         self.vector_store = vector_store
         self.llm = ChatOpenAI(
             model = "gpt-4o-mini",
@@ -26,7 +48,26 @@ class RAGChain:
             streaming =True
         )
 
-    async def query_stream(self, question: str, collection_name:str, chat_history: list[tuple[str,str]] = []):
+    async def query_stream(self, question: str, collection_name: str, chat_history: list[tuple[str, str]] = []):
+        """Stream an SSE answer for a question, grounded in retrieved docs.
+
+        Retrieves the top matching documents from ``collection_name``, formats
+        them alongside any prior conversation turns, and streams the LLM
+        response token by token. After the last token, a ``sources`` event
+        is emitted with metadata for each retrieved document, followed by a
+        ``[DONE]`` sentinel.
+
+        Args:
+            question: The user's question in plain text.
+            collection_name: Which Chroma collection to search against.
+            chat_history: Prior (human, assistant) exchange pairs. Defaults
+                to an empty list.
+
+        Yields:
+            SSE formatted strings. Each is one of three kinds: a ``token``
+            event carrying a chunk of the answer, a ``sources`` event with
+            document metadata, or the final ``[DONE]`` marker.
+        """
         docs = self.vector_store.similarity_search(question, collection_name)
 
         context = "\n\n".join([
