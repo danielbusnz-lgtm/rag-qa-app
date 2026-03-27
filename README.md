@@ -128,20 +128,36 @@ pytest
 ## Project Structure
 
 ```
-backend/
-  app/
-    main.py          # FastAPI routes and app setup
-    models.py        # Pydantic request/response schemas
-    ingestion.py     # PDF, URL, and text loading + chunking
-    retrieval.py     # ChromaDB vector store management
-    chain.py         # RAG pipeline and LLM streaming
-  tests/
-    test_ingestion.py
-    test_chain.py
-frontend/
-  src/
-    App.jsx          # Main React component
-    main.jsx         # Entry point
-docker-compose.yml
-.env.example
+├── backend/
+│   ├── app/
+│   │   ├── main.py              # FastAPI app, routes, lifespan
+│   │   ├── models.py            # Pydantic request/response schemas
+│   │   ├── ingestion.py         # PDF, URL, and text loading + chunking
+│   │   ├── retrieval.py         # ChromaDB vector store management
+│   │   └── chain.py             # RAG pipeline and LLM streaming
+│   ├── tests/
+│   │   ├── test_ingestion.py    # Text chunking, source metadata
+│   │   └── test_chain.py        # Collection routing, chat history
+│   ├── Dockerfile
+│   ├── Procfile                 # Heroku deployment
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx              # Main React component
+│   │   ├── App.css
+│   │   ├── main.jsx             # Entry point
+│   │   └── index.css
+│   ├── public/
+│   │   ├── favicon.svg
+│   │   └── icons.svg
+│   ├── index.html
+│   ├── vite.config.js
+│   └── package.json
+├── diagrams/
+│   └── architecture.tex         # LaTeX architecture diagram (TikZ)
+├── docker-compose.yml
+├── conftest.py                  # Pytest root config
+├── pytest.ini
+├── .env.example
+└── README.md
 ```
