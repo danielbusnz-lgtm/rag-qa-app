@@ -161,3 +161,32 @@ pytest
 ├── .env.example
 └── README.md
 ```
+
+## Future Plans
+
+**Retrieval quality**
+- Evaluation pipeline using RAGAS to measure retrieval precision, answer faithfulness, and hallucination rate across a test dataset, with scores displayed on a dashboard page
+- Hybrid search combining BM25 keyword search with vector similarity using reciprocal rank fusion
+- Cross-encoder reranking step (Cohere Rerank or local `sentence-transformers` model) between retrieval and generation
+- Configurable chunking strategies (fixed-size, semantic, parent-document retriever) with a settings panel to compare answer quality across methods
+
+**Observability and evaluation**
+- Debug view showing retrieved chunks, similarity scores, and which parts of the answer came from which source
+- OpenTelemetry tracing across retrieval, reranking, and generation steps
+- Per-query token usage logging and cumulative cost tracking on an admin page
+
+**Backend**
+- Async ingestion with job status tracking for large documents (background tasks with progress via WebSocket)
+- Multi-model support (OpenAI, Anthropic, Ollama) behind a provider-agnostic interface
+- Document management within collections (list, delete, inspect individual documents with metadata)
+- Server-side conversation persistence with session IDs and a conversation history sidebar
+
+**Frontend**
+- UI redesign with shadcn/ui, Tailwind, and TypeScript. Dark theme, sidebar for collections and conversations, collapsible source/debug panel
+- Markdown rendering in answers with syntax-highlighted code blocks (`react-markdown`)
+- Drag-and-drop document upload with progress indicators
+
+**Infrastructure**
+- CI/CD pipeline via GitHub Actions (lint with `ruff`, run `pytest`, build Docker image, deploy on push to main)
+- Separate production and dev dependencies (`pyproject.toml` with optional groups)
+- Environment-based API URL configuration for the frontend (`VITE_API_URL`)
