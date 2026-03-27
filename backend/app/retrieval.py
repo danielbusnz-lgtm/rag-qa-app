@@ -1,6 +1,7 @@
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain.schema import Document
+import chromadb
 import os
 
 CHROMA_PERSIST_DIR = "./chroma_db"
@@ -8,6 +9,7 @@ CHROMA_PERSIST_DIR = "./chroma_db"
 class VectorStore:
     def __init__(self):
         self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        self._client = chromadb.PersistentClient(path=CHROMA_PERSIST_DIR)
         self._stores: dict[str, Chroma] = {}
     def get_store(self, collection_name: str) -> Chroma:
         if collection_name not in self._stores:
@@ -29,10 +31,7 @@ class VectorStore:
         return store.similarity_search(query, k=k)
     
     def list_collections(self) -> list[str]:
-        if not os.path.exists(CHROMA_PERSIST_DIR):
-            return []
-        return [d for d in os.listdir(CHROMA_PERSIST_DIR)
-                if os.path.isdir(os.path.join(CHROMA_PERSIST_DIR, d))]
+        return [c.name for c in self._client.list_collections()]
     
     def delete_collection(self, collection_name: str):
         store = self.get_store(collection_name)
