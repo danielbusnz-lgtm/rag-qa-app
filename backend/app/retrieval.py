@@ -10,7 +10,8 @@ from langchain.schema import Document
 import chromadb
 import os
 
-CHROMA_PERSIST_DIR = "./chroma_db"
+CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 
 
 class VectorStore:
@@ -24,7 +25,7 @@ class VectorStore:
     """
 
     def __init__(self):
-        self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        self.embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
         self._client = chromadb.PersistentClient(path=CHROMA_PERSIST_DIR)
         self._stores: dict[str, Chroma] = {}
 

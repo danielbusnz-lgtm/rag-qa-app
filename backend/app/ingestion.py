@@ -13,7 +13,14 @@ from langchain_community.document_loaders import PyMuPDFLoader, AsyncHtmlLoader
 from langchain_community.document_transformers import Html2TextTransformer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
-import tempfile, os
+import asyncio
+import contextlib
+import tempfile
+import os
+
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 1000))
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 200))
+URL_FETCH_TIMEOUT_S = int(os.getenv("URL_FETCH_TIMEOUT_S", 15))
 
 
 class DocumentIngester:
@@ -30,8 +37,8 @@ class DocumentIngester:
 
     def __init__(self):
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
+            chunk_size=CHUNK_SIZE,
+            chunk_overlap=CHUNK_OVERLAP,
         )
 
     def ingest_pdf(self, file_bytes: bytes, filename: str) -> list[Document]:
@@ -58,19 +65,12 @@ class DocumentIngester:
                 doc.metadata["source"] = filename
             return self.text_splitter.split_documents(docs)
         finally:
-            os.unlink(tmp_path)
+            with contextlib.suppress(FileNotFoundError, OSError):
+                os.unlink(tmp_path)
 
     async def ingest_url(self, url: str) -> list[Document]:
-        """Fetch a web page, convert its HTML to plain text, and chunk it.
-
-        Args:
-            url: The page to fetch and ingest.
-
-        Returns:
-            Chunked documents with source metadata set to ``url``.
-        """
         loader = AsyncHtmlLoader([url])
-        docs = await loader.aload()
+        docs = await asyncio.wait_for(loader.aload(), timeout=URL_FETCH_TIMEOUT_S)
         transformer = Html2TextTransformer()
         docs = list(transformer.transform_documents(docs))
         for doc in docs:

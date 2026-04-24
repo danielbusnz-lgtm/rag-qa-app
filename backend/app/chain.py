@@ -16,6 +16,7 @@ from langchain_openai import ChatOpenAI
 from langchain.schema import Document
 from .retrieval import VectorStore
 import json
+import os
 
 SYSTEM_PROMPT = """You are a helpful assistant that answers questions based on the provided context.
 Use the following pieces of context to answer the question at the end.
@@ -31,6 +32,17 @@ Chat History:
 Question: {question}
 Answer:"""
 
+
+def _build_prompt(context: str, history_str: str, question: str) -> str:
+    # Replace placeholders literally — avoids .format() breaking on user input
+    # containing curly braces (prompt-injection vector).
+    return (
+        SYSTEM_PROMPT
+        .replace("{context}", context)
+        .replace("{chat_history}", history_str)
+        .replace("{question}", question)
+    )
+
 class RAGChain:
     """A retrieval-augmented generation chain that streams answers over SSE.
 
@@ -40,12 +52,11 @@ class RAGChain:
     """
 
     def __init__(self, vector_store: VectorStore):
-        """Set up the chain with a vector store and a default ChatOpenAI model."""
         self.vector_store = vector_store
         self.llm = ChatOpenAI(
-            model = "gpt-4o-mini",
+            model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
             temperature=0,
-            streaming =True
+            streaming=True,
         )
 
     async def query_stream(self, question: str, collection_name: str, chat_history: list[tuple[str, str]] = []):
@@ -68,7 +79,12 @@ class RAGChain:
             event carrying a chunk of the answer, a ``sources`` event with
             document metadata, or the final ``[DONE]`` marker.
         """
-        docs = self.vector_store.similarity_search(question, collection_name)
+        try:
+            docs = self.vector_store.similarity_search(question, collection_name)
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'content': f'Retrieval failed: {e}'})}\n\n"
+            yield "data: [DONE]\n\n"
+            return
 
         context = "\n\n".join([
             f"[Source: {doc.metadata.get('source', 'unknown')}, Page: {doc.metadata.get('page', 'N/A')}]\n{doc.page_content}"
@@ -80,23 +96,23 @@ class RAGChain:
             for h, a in chat_history
         ])
 
-        prompt = SYSTEM_PROMPT.format(
-            context=context,
-            chat_history=history_str,
-            question=question
-        )
+        prompt = _build_prompt(context, history_str, question)
         sources = [
             {
-                "source": doc.metadata.get("source","unknown"),
+                "source": doc.metadata.get("source", "unknown"),
                 "page": doc.metadata.get("page"),
-                "preview": doc.page_content[:200]
+                "preview": doc.page_content[:200],
             }
             for doc in docs
         ]
-        async for chunk in self.llm.astream(prompt):
-            yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"
 
-        yield f"data: {json.dumps({'type':'sources', 'content': sources})}\n\n"
+        try:
+            async for chunk in self.llm.astream(prompt):
+                yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'content': f'LLM stream failed: {e}'})}\n\n"
+
+        yield f"data: {json.dumps({'type': 'sources', 'content': sources})}\n\n"
         yield "data: [DONE]\n\n"
 
 

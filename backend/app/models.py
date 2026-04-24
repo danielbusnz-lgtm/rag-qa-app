@@ -4,8 +4,17 @@ These models define the shape of data flowing through the ingestion
 and query endpoints.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
+import re
+
+COLLECTION_RE = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
+
+
+def _validate_collection(v: str) -> str:
+    if not COLLECTION_RE.fullmatch(v or ""):
+        raise ValueError("collection_name must be 1-64 chars, alphanumeric / underscore / hyphen")
+    return v
 
 
 class IngestURLRequest(BaseModel):
@@ -18,6 +27,8 @@ class IngestURLRequest(BaseModel):
 
     url: str
     collection_name: str = "default"
+
+    _v_collection = field_validator("collection_name")(_validate_collection)
 
 
 class IngestTextRequest(BaseModel):
@@ -33,6 +44,8 @@ class IngestTextRequest(BaseModel):
     source_name: str = "manual_input"
     collection_name: str = "default"
 
+    _v_collection = field_validator("collection_name")(_validate_collection)
+
 
 class QueryRequest(BaseModel):
     """A question posed against a document collection.
@@ -47,6 +60,8 @@ class QueryRequest(BaseModel):
     question: str
     collection_name: str = "default"
     chat_history: list[tuple[str, str]] = []
+
+    _v_collection = field_validator("collection_name")(_validate_collection)
 
 
 class IngestResponse(BaseModel):
